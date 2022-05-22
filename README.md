@@ -1,3 +1,3 @@
-# Letterkenny IT Contemporary Software Development Project
+# Letterkenny IT CSD Project
 
 Linux Rootkit
